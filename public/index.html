@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lift Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <h2>Enter Your Lift Data</h2>
+
+    <label for="exercise">Exercise:</label>
+    <select id="exercise" onchange="loadLatestWeight()">
+        <option value="Bench Press">Bench Press</option>
+        <option value="Squat">Squat</option>
+        <option value="Deadlift">Deadlift</option>
+        <option value="Bent Over Row">Bent Over Row</option>
+        <option value="Standing Barbell Shoulder Press">Standing Barbell Shoulder Press</option>
+    </select><br><br>
+
+    <label for="weight">Weight Lifted:</label>
+    <input type="number" id="weight" placeholder="Enter weight in kg"><br><br>
+
+    <label for="set1">Set 1 Reps:</label>
+    <input type="number" id="set1" placeholder="Enter reps"><br><br>
+
+    <label for="set2">Set 2 Reps:</label>
+    <input type="number" id="set2" placeholder="Enter reps"><br><br>
+
+    <label for="set3">Set 3 Reps:</label>
+    <input type="number" id="set3" placeholder="Enter reps"><br><br>
+
+    <label for="set4">Set 4 Reps:</label>
+    <input type="number" id="set4" placeholder="Enter reps"><br><br>
+
+    <button onclick="calculate()">Submit</button>
+
+    <script>
+        function calculate() {
+            const weight = parseFloat(document.getElementById("weight").value);
+            const sets = [
+                parseFloat(document.getElementById("set1").value),
+                parseFloat(document.getElementById("set2").value),
+                parseFloat(document.getElementById("set3").value),
+                parseFloat(document.getElementById("set4").value)
+            ];
+            const exercise = document.getElementById("exercise").value;
+
+            let setsAbove7 = sets.filter(rep => rep >= 7).length;
+
+            let resultText = "For the " + exercise + ": ";
+
+            if (setsAbove7 === 4) {
+                resultText += "Increase weight by 2.5 kg";
+            } else {
+                resultText += "Keep or adjust weight.";
+            }
+
+            document.getElementById("result").innerText = resultText;
+            console.log(resultText);
+
+            // Save the data
+            fetch('/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    exercise: exercise,
+                    weight: weight,
+                    sets: sets
+                }),
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Reload to get latest data
+                        location.reload();
+                    }
+                });
+        }
+
+        function loadLatestWeight() {
+            const exercise = document.getElementById('exercise').value;
+            fetch(`/latest-weight/${exercise}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.weight) {
+                        document.getElementById('weight').value = data.weight;
+                    } else {
+                        document.getElementById('weight').value = '';  // Clear if no previous weight
+                    }
+                });
+        }
+
+        // Fetch the latest weights for each exercise and display them
+        fetch('/latest-weights')
+            .then(response => response.json())
+            .then(data => {
+                const latestWeightsDiv = document.getElementById('latest');
+                latestWeightsDiv.innerHTML = '<h3>Latest Weights:</h3>'; // Clear previous data and set a heading
+                data.forEach(entry => {
+                    latestWeightsDiv.innerHTML += `<p>${entry.exercise}: ${entry.weight} kg</p>`;
+                });
+            });
+
+    </script>
+    <div id="latest"></div>
+</body>
+
+</html>
